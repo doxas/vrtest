@@ -1,8 +1,6 @@
 // ============================================================================
 // # TODO
 // * クォータニオンの正規化関連
-// * フルスクリーン対応
-// * ビューの設定がフォールバックして生きるか
 // * ポジトラのチェック
 // 
 // 
@@ -12,6 +10,8 @@ var vr;
 var Q = gl3.qtn.create();
 var qt = gl3.qtn.create();
 gl3.qtn.identity(qt);
+
+var PUSH_VR = false; // rendering target to hmd flags
 
 window.onload = function(){
 	// hmd
@@ -264,6 +264,8 @@ function init(){
 		var centerPoint = [0.0, 0.0, 0.0];
 		var cameraUpDirection = [];
 		
+		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
+
 		function renderMode(trans, view){
 			var cam = [
 				0.0  + trans[0],
@@ -276,9 +278,8 @@ function init(){
 				cameraPosition,
 				centerPoint,
 				cameraUpDirection,
-				45, 1.0, 0.1, 20.0
+				45, vr.aspect, 0.1, 20.0
 			);
-			gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
 			gl3.scene_view(camera, view[0], view[1], view[2], view[3]);
 			gl3.mat4.vpFromCamera(camera, vMatrix, pMatrix, vpMatrix);
 	
@@ -372,12 +373,12 @@ function keyDown(eve){
 	if(eve.keyCode === 13){
 		vr.vrMode = true;
 		vr.resize();
-		if(gl3.canvas.webkitRequestFullscreen) {
-			gl3.canvas.webkitRequestFullscreen();
-//			gl3.canvas.webkitRequestFullscreen({vrDisplay: vr.hmd});
+		var flg = {}
+		if(PUSH_VR){flg.vrDisplay = vr.hmd}
+		if(gl3.canvas.webkitRequestFullscreen){
+			gl3.canvas.webkitRequestFullscreen(flg);
 		}else if(gl3.canvas.mozRequestFullScreen){
-			gl3.canvas.mozRequestFullScreen();
-//			gl3.canvas.mozRequestFullScreen({vrDisplay: vr.hmd});
+			gl3.canvas.mozRequestFullScreen(flg);
 		}
 	}
 }
