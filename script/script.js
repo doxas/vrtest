@@ -1,4 +1,5 @@
 var vr;
+var Q = gl3.qtn.create();
 var qt = gl3.qtn.create();
 gl3.qtn.identity(qt);
 
@@ -114,11 +115,12 @@ window.onload = function(){
 			}
 		};
 		this.fovScale = 1.0;
-		this.resizeFov(amount){
-			var fovLeft, fovRight;
+		this.resizeFov = function(amount){
+			var fovLeft, fovRight, a;
 			if(!this.hmd){return;}
-			if(amount != 0 && 'setFieldOfView' in this.hmd){
-				this.fovScale += amount;
+			if(amount == null){a = 0.0;}else{a = amount;}
+			if(a != 0 && 'setFieldOfView' in this.hmd){
+				this.fovScale += a;
 				if(this.fovScale < 0.1){this.fovScale = 0.1;}
 				fovLeft = this.hmd.getRecommendedEyeFieldOfView("left");
 				fovRight = this.hmd.getRecommendedEyeFieldOfView("right");
@@ -146,8 +148,8 @@ window.onload = function(){
 				this.fov.left  = this.hmd.getRecommendedEyeFieldOfView("left");
 				this.fov.right = this.hmd.getRecommendedEyeFieldOfView("right");
 			}
-			this.pMatrix.left  = this.perspective(fovLeft, 0.1, 1000);
-			this.pMatrix.right = this.perspective(fovRight, 0.1, 1000);
+			this.pMatrix.left  = this.perspective(this.fov.left, 0.1, 1000);
+			this.pMatrix.right = this.perspective(this.fov.right, 0.1, 1000);
 		}
 	}
 	vr.init(init);
@@ -160,6 +162,7 @@ function init(){
 		console.log('not dvice');
 		return;
 	}
+	vr.resizeFov(0.0);
 	
 	// initialize
 	gl3.initGL('canvas');
@@ -172,7 +175,7 @@ function init(){
 
 	// event
 	gl3.canvas.addEventListener('mousemove', mouseMove, false);
-	window.addEventListener('resize', resize, false);
+	window.addEventListener('resize', vr.resize, false);
 
 	// program
 	var prg = gl3.program.create(
@@ -209,6 +212,7 @@ function init(){
 	vpMatrix = gl3.mat4.identity(gl3.mat4.create());
 	mvpMatrix = gl3.mat4.identity(gl3.mat4.create());
 	invMatrix = gl3.mat4.identity(gl3.mat4.create());
+	qMatrix = gl3.mat4.identity(gl3.mat4.create());
 
 	// depth test
 	gl3.gl.enable(gl3.gl.DEPTH_TEST);
@@ -222,6 +226,23 @@ function init(){
 	function render(){
 		var i, j;
 		count++;
+		
+		// vr
+		if(!vr.update()){
+			console.log('hmd update failed!');
+			return;
+		}
+		gl3.qtn.identity(Q);
+		gl3.qtn.rotate(
+			vr.state.orientation.w,
+			[
+				vr.state.orientation.x,
+				vr.state.orientation.y,
+				vr.state.orientation.z
+			],
+			Q
+		);
+		gl3.qtn.toMatIV(Q, qMatrix);
 
 		var sin = gl3.TRI.sin[count % 360] * 4.0;
 		var lightPosition = [0.0, sin, 0.0];
@@ -246,6 +267,7 @@ function init(){
 		var radian = gl3.TRI.rad[count % 360];
 		var axis = [0.0, 1.0, 0.0];
 		gl3.mat4.identity(mMatrix);
+		gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
 		gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
 		gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
 		gl3.mat4.inverse(mMatrix, invMatrix);
@@ -262,6 +284,7 @@ function init(){
 				var offset = [i + 1.0, 0.0, 0.0];
 				radian = gl3.TRI.rad[j * 45];
 				gl3.mat4.identity(mMatrix);
+				gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
 				gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
 				gl3.mat4.translate(mMatrix, offset, mMatrix);
 				gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
