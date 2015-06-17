@@ -11,7 +11,7 @@ var Q = gl3.qtn.create();  // vr quaternion
 var qt = gl3.qtn.create(); // mouse quaternion
 gl3.qtn.identity(qt);
 
-var PUSH_VR = false;       // rendering target to hmd flags
+var PUSH_VR = false // rendering target to hmd flags
 
 window.onload = function(){
 	vr = new HMD();
@@ -117,6 +117,15 @@ window.onload = function(){
 				this.fov.right = this.hmd.getRecommendedEyeFieldOfView("right");
 			}
 		}
+		this.reset = function(){
+			if(this.sensor != null){
+				if('resetSensor' in this.sensor){
+					this.sensor.resetSensor();
+				}else if('zeroSensor' in this.sensor){
+					this.sensor.zeroSensor();
+				}
+			}
+		}
 	}
 	vr.init(initialize);
 };
@@ -130,6 +139,7 @@ function initialize(){
 		return;
 	}
 	vr.resizeFov(0.0);
+	vr.reset();
 	
 	// initialize
 	gl3.initGL('canvas');
@@ -342,6 +352,7 @@ function keyDown(eve){
 function onFullscreenChange() {
 	if(!document.webkitFullscreenElement && !document.mozFullScreenElement){vr.vrMode = false;}
 	vr.resize();
+	vr.reset();
 }
 
 
