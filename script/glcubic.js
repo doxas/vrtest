@@ -806,22 +806,22 @@ gl3.q4.prototype.toMatIV = function(qtn, dest){
 	var yy = y * y2, yz = y * z2, zz = z * z2;
 	var wx = w * x2, wy = w * y2, wz = w * z2;
 	dest[0]  = 1 - (yy + zz);
-	dest[1]  = xy - wz;
-	dest[2]  = xz + wy;
+	dest[1]  = xy + wz;
+	dest[2]  = xz - wy;
 	dest[3]  = 0;
-	dest[4]  = xy + wz;
+	dest[4]  = xy - wz;
 	dest[5]  = 1 - (xx + zz);
-	dest[6]  = yz - wx;
+	dest[6]  = yz + wx;
 	dest[7]  = 0;
-	dest[8]  = xz - wy;
-	dest[9]  = yz + wx;
+	dest[8]  = xz + wy;
+	dest[9]  = yz - wx;
 	dest[10] = 1 - (xx + yy);
 	dest[11] = 0;
 	dest[12] = 0;
 	dest[13] = 0;
 	dest[14] = 0;
 	dest[15] = 1;
-	return dest;
+    return dest;
 };
 
 gl3.q4.prototype.slerp = function(qtn1, qtn2, time, dest){

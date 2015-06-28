@@ -63,6 +63,14 @@ a:hover {
 	padding: 0px 15px;
 }
 
+#info {
+	font-size: 20px;
+	text-align: left;
+	position: absolute;
+	top: 20px;
+	left: 20px;
+}
+
 .bufferCanvas {
 	display: block;
 	position: absolute;

@@ -10,6 +10,8 @@ var vr;                    // vr wrap
 var qvr = gl3.qtn.create();  // vr quaternion
 var qt = gl3.qtn.create(); // mouse quaternion
 gl3.qtn.identity(qt);
+var run = true;
+var info = null;
 
 var PUSH_VR = true; // rendering target to hmd flags
 var POSITION_SCALE = 1; // position tracking scale coefficient
@@ -26,8 +28,6 @@ function initialize(){
 		alert('device initialization failed');
 		return;
 	}
-	vr.resizeFov(0.0);
-	vr.reset();
 	
 	// initialize
 	gl3.initGL('canvas');
@@ -43,6 +43,14 @@ function initialize(){
 	window.addEventListener('keydown', keyDown, false);
 	document.addEventListener("webkitfullscreenchange", onFullscreenChange, false);
 	document.addEventListener("mozfullscreenchange", onFullscreenChange, false);
+	
+	// dom
+	info = {
+		infoX: document.getElementById('infoX'),
+		infoY: document.getElementById('infoY'),
+		infoZ: document.getElementById('infoZ'),
+		infoW: document.getElementById('infoW')
+	};
 
 	// program
 	var prg = gl3.program.create(
@@ -55,7 +63,7 @@ function initialize(){
 	);
 
 	// torus mesh
-	var torusData = gl3.mesh.torus(128, 128, 3.0, 30.0);
+	var torusData = gl3.mesh.torus(128, 128, 1.0, 3.0);
 	var torusVBO = [
 		gl3.create_vbo(torusData.position),
 		gl3.create_vbo(torusData.normal),
@@ -91,10 +99,15 @@ function initialize(){
 	var count = 0;
 	var lightPosition = [0.0, 0.0, 0.0];
 	
+	// sensor reset
+	vr.resizeFov(0.0);
+	vr.reset();
+	
 	render();
 
 	function render(){
 		var _i, i, j;
+		var gl = gl3.gl;
 		count++;
 		gl3.canvas.width  = window.innerWidth;
 		gl3.canvas.height = window.innerHeight;
@@ -106,7 +119,7 @@ function initialize(){
 		}
 		gl3.qtn.identity(qvr);
 		gl3.qtn.rotate(
-			vr.state.orientation.w,
+			(1.0 - vr.state.orientation.w) * gl3.PI,
 			[
 				vr.state.orientation.x,
 				vr.state.orientation.y,
@@ -115,42 +128,33 @@ function initialize(){
 			qvr
 		);
 		gl3.qtn.toMatIV(qvr, qMatrix);
+		info.infoX.textContent = 'x: ' + vr.state.orientation.x;
+		info.infoY.textContent = 'y: ' + vr.state.orientation.y;
+		info.infoZ.textContent = 'z: ' + vr.state.orientation.z;
+		info.infoW.textContent = 'w: ' + vr.state.orientation.w;
 
 		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
 
-		cameraPosition = [0.0, 0.0, 0.0];
-		centerPoint = [0.0, 0.0, -1.0];
+		cameraPosition = [0.0, 0.0, 10.0];
+		centerPoint = [0.0, 0.0, 0.0];
 		cameraUpDirection = [0.0, 1.0, 0.0];
 		
 		function renderMode(trans, view){
-			var cam = [
-				cameraPosition[0] + trans[0],
-				cameraPosition[1] + trans[1],
-				cameraPosition[2] + trans[2]
-			];
-			var camP = [];
-			var cntP = [];
-			var camU = [];
-			gl3.qtn.toVecIII(cam, qvr, camP);
-			gl3.qtn.toVecIII(centerPoint, qvr, cntP);
-			gl3.qtn.toVecIII(cameraUpDirection, qvr, camU);
 			var camera = gl3.camera.create(
-				camP, cntP, camU,
+				cameraPosition, centerPoint, cameraUpDirection,
 				60, vr.aspect, 0.1, 100.0
 			);
 			gl3.scene_view(camera, view[0], view[1], view[2], view[3]);
 			gl3.mat4.vpFromCamera(camera, vMatrix, pMatrix, vpMatrix);
 	
 			// torus rendering
-			gl.cullFace(gl.FRONT);
 			prg.set_program();
 			prg.set_attribute(torusVBO, torusIBO);
 			var radian = gl3.TRI.rad[count % 360];
 			var axis = [0.0, 1.0, 0.0];
-			var offset = [30.0, 0.0, 0.0];
 			gl3.mat4.identity(mMatrix);
-			gl3.mat4.translate(mMatrix, offset, mMatrix);
-			gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
+			gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
+			//gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
 			gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
 			gl3.mat4.inverse(mMatrix, invMatrix);
 			var ambientColor = [0.1, 0.1, 0.1, 0.0];
@@ -209,7 +213,7 @@ function initialize(){
 				[0, 0, gl3.canvas.width, gl3.canvas.height]
 			);
 		}
-		requestAnimationFrame(render);
+		if(run){requestAnimationFrame(render);}
 	}
 }
 
@@ -241,6 +245,8 @@ function keyDown(eve){
 		}else if(gl3.canvas.mozRequestFullScreen){
 			gl3.canvas.mozRequestFullScreen(flg);
 		}
+	}else if(eve.keyCode === 27){
+		run = false;
 	}
 }
 
