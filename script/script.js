@@ -72,7 +72,7 @@ function initialize(){
 	var torusIBO = gl3.create_ibo(torusData.index);
 
 	// sphere mesh
-	var sphereData = gl3.mesh.sphere(32, 32, 0.25);
+	var sphereData = gl3.mesh.sphere(32, 32, 0.5);
 	var sphereVBO = [
 		gl3.create_vbo(sphereData.position),
 		gl3.create_vbo(sphereData.normal),
@@ -110,29 +110,30 @@ function initialize(){
 	// rendering
 	var count = 0;
 	var lightPosition = [30.0, 30.0, 30.0];
-	
+
 	// sensor reset
 	if(vr.ready){
 		vr.resizeFov(0.0);
 		vr.reset();
 	}
-	
+
 	// rendering
 	render();
 	function render(){
 		var gl = gl3.gl;
-		
+		var time = timeValue();
+
 		// initial
 		count++;
 		gl3.canvas.width  = window.innerWidth;
 		gl3.canvas.height = window.innerHeight;
 		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
-		
+
 		// camera
-		var cameraPosition = [0.0, 0.0, 10.0];
+		var cameraPosition = [0.0, 3.0, 10.0];
 		var centerPoint = [0.0, 0.0, -10.0];
 		var cameraUpDirection = [0.0, 1.0, 0.0];
-		
+
 		// vr
 		if(vr.ready){
 			if(!vr.update()){
@@ -160,7 +161,7 @@ function initialize(){
 			);
 			gl3.qtn.toMatIV(qvr, qMatrix);
 			gl3.qtn.toVecIII([0.0, 0.0, -10.0], qc, centerPoint);
-			
+
 			// info
 			info.infoX.textContent = 'orientation-x: ' + vr.state.orientation.x;
 			info.infoY.textContent = 'orientation-y: ' + vr.state.orientation.y;
@@ -173,7 +174,7 @@ function initialize(){
 		}else{
 			gl3.mat4.identity(qMatrix);
 		}
-		
+
 		// render
 		if(vr.vrMode){
 			var etl = vr.eyeTranslation.left;
@@ -185,10 +186,10 @@ function initialize(){
 		}else{
 			renderMode(cameraPosition, [0, 0, gl3.canvas.width, gl3.canvas.height]);
 		}
-		
+
 		// animation
 		if(run){requestAnimationFrame(render);}
-		
+
 		// rendering mode function
 		function renderMode(trans, view){
 			var i, j;
@@ -202,7 +203,7 @@ function initialize(){
 			);
 			gl3.scene_view(camera, view[0], view[1], view[2], view[3]);
 			gl3.mat4.vpFromCamera(camera, vMatrix, pMatrix, vpMatrix);
-			
+
 			// torus rendering
 			prg.set_program();
 			prg.set_attribute(hallVBO, hallIBO);
@@ -213,24 +214,32 @@ function initialize(){
 			gl3.mat4.inverse(mMatrix, invMatrix);
 			prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
 			gl3.draw_elements(gl.TRIANGLES, hallData.index.length);
-			
-			// torus rendering
-			prg.set_attribute(torusVBO, torusIBO);
-			var radian = gl3.TRI.rad[count % 360];
-			var axis = [0.0, 1.0, 1.0];
-			for(i = 0; i < 90; i++){
+
+			// sphere rendering
+			var radian;
+			prg.set_attribute(sphereVBO, sphereIBO);
+
+			// draw
+			time.h  = (360 - time.h * 360) * gl3.BPI / 180;
+			time.m  = (360 - time.m * 360) * gl3.BPI / 180;
+			time.s  = (360 - (time.s + time.ms / 60.0) * 360) * gl3.BPI / 180;
+			time.ms = (360 - time.ms * 360) * gl3.BPI / 180;
+			draw(time.h,  15.0);
+			draw(time.m,  20.0);
+			draw(time.s,  25.0);
+			draw(time.ms, 10.0);
+
+			function draw(rad, offset){
+				var s = offset / 2;
 				gl3.mat4.identity(mMatrix);
-				gl3.mat4.rotate(mMatrix, radian, [0,0,1], mMatrix);
-				gl3.mat4.translate(mMatrix, [30.0, 0.0, 0.0], mMatrix);
-				gl3.mat4.rotate(mMatrix, gl3.TRI.rad[(count + i * 4) % 360], [0,1,0], mMatrix);
-				gl3.mat4.translate(mMatrix, [-30.0, 0.0, 0.0], mMatrix);
-				gl3.mat4.rotate(mMatrix, gl3.TRI.rad[i * 2], [0,0,1], mMatrix);
-				gl3.mat4.rotate(mMatrix, gl3.PI2, [1,0,0], mMatrix);
-//				gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
+				gl3.mat4.rotate(mMatrix, rad, [0.0, 1.0, 0.0], mMatrix);
+				gl3.mat4.translate(mMatrix, [0.0, 0.0, s], mMatrix);
+				gl3.mat4.scale(mMatrix, [0.25, 0.25, offset], mMatrix);
+				// gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
 				gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
 				gl3.mat4.inverse(mMatrix, invMatrix);
 				prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
-//				gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
+				gl3.draw_elements(gl.TRIANGLES, sphereData.index.length);
 			}
 		}
 	}
@@ -258,6 +267,15 @@ function onFullscreenChange() {
 	if(!document.webkitFullscreenElement && !document.mozFullScreenElement){vr.vrMode = false;}
 	vr.resize();
 	vr.reset();
+}
+
+function timeValue(){
+	var d = new Date();
+	var h = (d.getHours() % 12) / 12;
+	var m = d.getMinutes() / 60;
+	var s = d.getSeconds() / 60;
+	var k = d.getMilliseconds() / 1000;
+	return {h: h, m: m, s: s, ms: k};
 }
 
 // hmd ========================================================================
