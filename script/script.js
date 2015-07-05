@@ -6,9 +6,10 @@
 // 
 // ============================================================================
 
-var vr;                    // vr wrap
+var vr;                      // vr wrap
 var qvr = gl3.qtn.create();  // vr quaternion
-var qt = gl3.qtn.create(); // mouse quaternion
+var qc = gl3.qtn.create();   // vr camera quaternion
+var qt = gl3.qtn.create();   // mouse quaternion
 gl3.qtn.identity(qt);
 var run = true;
 var info = null;
@@ -49,7 +50,11 @@ function initialize(){
 		infoX: document.getElementById('infoX'),
 		infoY: document.getElementById('infoY'),
 		infoZ: document.getElementById('infoZ'),
-		infoW: document.getElementById('infoW')
+		infoW: document.getElementById('infoW'),
+		infoPX: document.getElementById('infoPX'),
+		infoPY: document.getElementById('infoPY'),
+		infoPZ: document.getElementById('infoPZ'),
+		infoPW: document.getElementById('infoPW')
 	};
 
 	// program
@@ -63,7 +68,7 @@ function initialize(){
 	);
 
 	// torus mesh
-	var torusData = gl3.mesh.torus(128, 128, 1.0, 3.0);
+	var torusData = gl3.mesh.torus(32, 32, 1.0, 4.0);
 	var torusVBO = [
 		gl3.create_vbo(torusData.position),
 		gl3.create_vbo(torusData.normal),
@@ -108,7 +113,7 @@ function initialize(){
 	function render(){
 		var _i, i, j;
 		var gl = gl3.gl;
-		count++;
+		count += 1.0;
 		gl3.canvas.width  = window.innerWidth;
 		gl3.canvas.height = window.innerHeight;
 		
@@ -127,22 +132,46 @@ function initialize(){
 			],
 			qvr
 		);
+		gl3.qtn.rotate(
+			(1.0 - vr.state.orientation.w) * gl3.PI,
+			[
+				-vr.state.orientation.x,
+				-vr.state.orientation.y,
+				vr.state.orientation.z
+			],
+			qc
+		);
 		gl3.qtn.toMatIV(qvr, qMatrix);
-		info.infoX.textContent = 'x: ' + vr.state.orientation.x;
-		info.infoY.textContent = 'y: ' + vr.state.orientation.y;
-		info.infoZ.textContent = 'z: ' + vr.state.orientation.z;
-		info.infoW.textContent = 'w: ' + vr.state.orientation.w;
+		info.infoX.textContent = 'orientation-x: ' + vr.state.orientation.x;
+		info.infoY.textContent = 'orientation-y: ' + vr.state.orientation.y;
+		info.infoZ.textContent = 'orientation-z: ' + vr.state.orientation.z;
+		info.infoW.textContent = 'orientation-w: ' + vr.state.orientation.w;
+		info.infoPX.textContent = 'position-x: ' + vr.state.position.x;
+		info.infoPY.textContent = 'position-y: ' + vr.state.position.y;
+		info.infoPZ.textContent = 'position-z: ' + vr.state.position.z;
+		info.infoPW.textContent = 'position-w: ' + vr.state.position.w;
 
 		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
 
-		cameraPosition = [0.0, 0.0, 10.0];
-		centerPoint = [0.0, 0.0, 0.0];
+//		cameraPosition = [0.0, 0.0, 10.0];
+//		centerPoint = [0.0, 0.0, 0.0];
+//		cameraUpDirection = [0.0, 1.0, 0.0];
+		var cameraPosition = [];
+		var centerPoint = [];
+		var cameraUpDirection = [];
+		cameraPosition = [0.0, 0.0, 0.0];
 		cameraUpDirection = [0.0, 1.0, 0.0];
+		gl3.qtn.toVecIII([0.0, 0.0, -10.0], qc, centerPoint);
 		
 		function renderMode(trans, view){
+			var i, j;
+			j = 1.0;
+			cameraPosition[0] = trans[0] * j;
+			cameraPosition[1] = trans[1] * j;
+			cameraPosition[2] = trans[2] * j;
 			var camera = gl3.camera.create(
 				cameraPosition, centerPoint, cameraUpDirection,
-				60, vr.aspect, 0.1, 100.0
+				90, vr.aspect, 0.1, 100.0
 			);
 			gl3.scene_view(camera, view[0], view[1], view[2], view[3]);
 			gl3.mat4.vpFromCamera(camera, vMatrix, pMatrix, vpMatrix);
@@ -151,16 +180,22 @@ function initialize(){
 			prg.set_program();
 			prg.set_attribute(torusVBO, torusIBO);
 			var radian = gl3.TRI.rad[count % 360];
-			var axis = [0.0, 1.0, 0.0];
-			gl3.mat4.identity(mMatrix);
-			gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
-			//gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
-			gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
-			gl3.mat4.inverse(mMatrix, invMatrix);
-			var ambientColor = [0.1, 0.1, 0.1, 0.0];
-			prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
-			gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
-	
+			var axis = [0.0, 1.0, 1.0];
+			for(i = 0; i < 90; i++){
+				gl3.mat4.identity(mMatrix);
+				gl3.mat4.rotate(mMatrix, radian, [0,0,1], mMatrix);
+				gl3.mat4.translate(mMatrix, [30.0, 0.0, 0.0], mMatrix);
+				gl3.mat4.rotate(mMatrix, gl3.TRI.rad[(count + i * 4) % 360], [0,1,0], mMatrix);
+				gl3.mat4.translate(mMatrix, [-30.0, 0.0, 0.0], mMatrix);
+				gl3.mat4.rotate(mMatrix, gl3.TRI.rad[i * 2], [0,0,1], mMatrix);
+				gl3.mat4.rotate(mMatrix, gl3.PI2, [1,0,0], mMatrix);
+//				gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
+				gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
+				gl3.mat4.inverse(mMatrix, invMatrix);
+				var ambientColor = [0.1, 0.1, 0.1, 0.0];
+				prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
+				gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
+			}
 			// sphere rendering
 //			prg.set_program();
 //			prg.set_attribute(sphereVBO, sphereIBO);

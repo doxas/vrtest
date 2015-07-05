@@ -772,9 +772,8 @@ gl3.q4.prototype.multiply = function(qtn1, qtn2, dest){
 
 gl3.q4.prototype.rotate = function(angle, axis, dest){
 	var sq = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
-	if(!sq){return null;}
 	var a = axis[0], b = axis[1], c = axis[2];
-	if(sq != 1){sq = 1 / sq; a *= sq; b *= sq; c *= sq;}
+	if(sq != 1){a /= sq; b /= sq; c /= sq;}
 	var s = Math.sin(angle * 0.5);
 	dest[0] = a * s;
 	dest[1] = b * s;
