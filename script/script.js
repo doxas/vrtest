@@ -24,12 +24,6 @@ window.onload = function(){
 
 // ============================================================================
 function initialize(){
-	if(!vr.hmd){
-		console.log('device initialization failed');
-		alert('device initialization failed');
-		return;
-	}
-	
 	// initialize
 	gl3.initGL('canvas');
 	if(!gl3.ready){console.log('initialize error'); return;}
@@ -40,7 +34,6 @@ function initialize(){
 	gl3.canvas.height = window.innerHeight;
 
 	// event
-//	gl3.canvas.addEventListener('mousemove', mouseMove, false);
 	window.addEventListener('keydown', keyDown, false);
 	document.addEventListener("webkitfullscreenchange", onFullscreenChange, false);
 	document.addEventListener("mozfullscreenchange", onFullscreenChange, false);
@@ -105,64 +98,85 @@ function initialize(){
 	var lightPosition = [0.0, 0.0, 0.0];
 	
 	// sensor reset
-	vr.resizeFov(0.0);
-	vr.reset();
+	if(vr.ready){
+		vr.resizeFov(0.0);
+		vr.reset();
+	}
 	
+	// rendering
 	render();
-
 	function render(){
 		var _i, i, j;
 		var gl = gl3.gl;
-		count += 1.0;
+		
+		// initial
+		count++;
 		gl3.canvas.width  = window.innerWidth;
 		gl3.canvas.height = window.innerHeight;
+		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
+		
+		// camera
+		var cameraPosition = [0.0, 0.0, 0.0];
+		var centerPoint = [0.0, 0.0, -10.0];
+		var cameraUpDirection = [0.0, 1.0, 0.0];
 		
 		// vr
-		if(!vr.update()){
-			console.log('hmd update failed!');
-			return;
+		if(vr.ready){
+			if(!vr.update()){
+				console.log('hmd update failed!');
+				return;
+			}
+			gl3.qtn.identity(qvr);
+			gl3.qtn.rotate(
+				(1.0 - vr.state.orientation.w) * gl3.PI,
+				[
+					vr.state.orientation.x,
+					vr.state.orientation.y,
+					vr.state.orientation.z
+				],
+				qvr
+			);
+			gl3.qtn.rotate(
+				(1.0 - vr.state.orientation.w) * gl3.PI,
+				[
+					-vr.state.orientation.x,
+					-vr.state.orientation.y,
+					vr.state.orientation.z
+				],
+				qc
+			);
+			gl3.qtn.toMatIV(qvr, qMatrix);
+			gl3.qtn.toVecIII([0.0, 0.0, -10.0], qc, centerPoint);
+			
+			// info
+			info.infoX.textContent = 'orientation-x: ' + vr.state.orientation.x;
+			info.infoY.textContent = 'orientation-y: ' + vr.state.orientation.y;
+			info.infoZ.textContent = 'orientation-z: ' + vr.state.orientation.z;
+			info.infoW.textContent = 'orientation-w: ' + vr.state.orientation.w;
+			info.infoPX.textContent = 'position-x: ' + vr.state.position.x;
+			info.infoPY.textContent = 'position-y: ' + vr.state.position.y;
+			info.infoPZ.textContent = 'position-z: ' + vr.state.position.z;
+			info.infoPW.textContent = 'position-w: ' + vr.state.position.w;
+		}else{
+			gl3.mat4.identity(qMatrix);
 		}
-		gl3.qtn.identity(qvr);
-		gl3.qtn.rotate(
-			(1.0 - vr.state.orientation.w) * gl3.PI,
-			[
-				vr.state.orientation.x,
-				vr.state.orientation.y,
-				vr.state.orientation.z
-			],
-			qvr
-		);
-		gl3.qtn.rotate(
-			(1.0 - vr.state.orientation.w) * gl3.PI,
-			[
-				-vr.state.orientation.x,
-				-vr.state.orientation.y,
-				vr.state.orientation.z
-			],
-			qc
-		);
-		gl3.qtn.toMatIV(qvr, qMatrix);
-		info.infoX.textContent = 'orientation-x: ' + vr.state.orientation.x;
-		info.infoY.textContent = 'orientation-y: ' + vr.state.orientation.y;
-		info.infoZ.textContent = 'orientation-z: ' + vr.state.orientation.z;
-		info.infoW.textContent = 'orientation-w: ' + vr.state.orientation.w;
-		info.infoPX.textContent = 'position-x: ' + vr.state.position.x;
-		info.infoPY.textContent = 'position-y: ' + vr.state.position.y;
-		info.infoPZ.textContent = 'position-z: ' + vr.state.position.z;
-		info.infoPW.textContent = 'position-w: ' + vr.state.position.w;
-
-		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
-
-//		cameraPosition = [0.0, 0.0, 10.0];
-//		centerPoint = [0.0, 0.0, 0.0];
-//		cameraUpDirection = [0.0, 1.0, 0.0];
-		var cameraPosition = [];
-		var centerPoint = [];
-		var cameraUpDirection = [];
-		cameraPosition = [0.0, 0.0, 0.0];
-		cameraUpDirection = [0.0, 1.0, 0.0];
-		gl3.qtn.toVecIII([0.0, 0.0, -10.0], qc, centerPoint);
 		
+		// render
+		if(vr.vrMode){
+			var etl = vr.eyeTranslation.left;
+			var etr = vr.eyeTranslation.right;
+			var evl = vr.eyeViewport.left;
+			var evr = vr.eyeViewport.right;
+			renderMode([etl.x, etl.y, etl.z], [evl.left, evl.right, evl.width, evl.height]);
+			renderMode([etr.x, etr.y, etr.z], [evr.left, evr.right, evr.width, evr.height]);
+		}else{
+			renderMode([0.0, 0.0, 0.0], [0, 0, gl3.canvas.width, gl3.canvas.height]);
+		}
+		
+		// animation
+		if(run){requestAnimationFrame(render);}
+		
+		// rendering mode function
 		function renderMode(trans, view){
 			var i, j;
 			j = 1.0;
@@ -196,89 +210,22 @@ function initialize(){
 				prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
 				gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
 			}
-			// sphere rendering
-//			prg.set_program();
-//			prg.set_attribute(sphereVBO, sphereIBO);
-//			axis = [0.0, 1.0, 0.0];
-//			for(i = 0; i < 3; i++){
-//				for(j = 0; j < 8; j++){
-//					var offset = [i + 1.0, 0.0, 0.0];
-//					radian = gl3.TRI.rad[j * 45];
-//					gl3.mat4.identity(mMatrix);
-//					gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
-//					gl3.mat4.rotate(mMatrix, radian, axis, mMatrix);
-//					gl3.mat4.translate(mMatrix, offset, mMatrix);
-//					gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
-//					gl3.mat4.inverse(mMatrix, invMatrix);
-//					prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
-//					gl3.draw_elements(gl.TRIANGLES, sphereData.index.length);
-//				}
-//			}
 		}
-		if(vr.vrMode){
-			renderMode(
-				[
-					vr.eyeTranslation.left.x,
-					vr.eyeTranslation.left.y,
-					vr.eyeTranslation.left.z
-				],
-				[
-					vr.eyeViewport.left.left,
-					vr.eyeViewport.left.top,
-					vr.eyeViewport.left.width,
-					vr.eyeViewport.left.height
-				]
-			);
-			renderMode(
-				[
-					vr.eyeTranslation.right.x,
-					vr.eyeTranslation.right.y,
-					vr.eyeTranslation.right.z
-				],
-				[
-					vr.eyeViewport.right.left,
-					vr.eyeViewport.right.top,
-					vr.eyeViewport.right.width,
-					vr.eyeViewport.right.height
-				]
-			);
-		}else{
-			renderMode(
-				[0.0, 0.0, 0.0],
-				[0, 0, gl3.canvas.width, gl3.canvas.height]
-			);
-		}
-		if(run){requestAnimationFrame(render);}
 	}
 }
 
-// event ======================================================================
-//function mouseMove(eve){
-//	var cw = gl3.canvas.width;
-//	var ch = gl3.canvas.height;
-//	var wh = 1 / Math.sqrt(cw * cw + ch * ch);
-//	var x = eve.clientX - gl3.canvas.offsetLeft - cw * 0.5;
-//	var y = eve.clientY - gl3.canvas.offsetTop - ch * 0.5;
-//	var sq = Math.sqrt(x * x + y * y);
-//	var r = sq * 2.0 * Math.PI * wh;
-//	if (sq != 1) {
-//		sq = 1 / sq;
-//		x *= sq;
-//		y *= sq;
-//	}
-//	gl3.qtn.rotate(r, [y, x, 0.0], qt);
-//}
-
 function keyDown(eve){
 	if(eve.keyCode === 13){
-		vr.vrMode = true;
-		vr.resize();
-		var flg = {}
-		if(PUSH_VR){flg.vrDisplay = vr.hmd;}
-		if(gl3.canvas.webkitRequestFullscreen){
-			gl3.canvas.webkitRequestFullscreen(flg);
-		}else if(gl3.canvas.mozRequestFullScreen){
-			gl3.canvas.mozRequestFullScreen(flg);
+		if(vr.ready){
+			vr.vrMode = true;
+			vr.resize();
+			var flg = {}
+			if(PUSH_VR){flg.vrDisplay = vr.hmd;}
+			if(gl3.canvas.webkitRequestFullscreen){
+				gl3.canvas.webkitRequestFullscreen(flg);
+			}else if(gl3.canvas.mozRequestFullScreen){
+				gl3.canvas.mozRequestFullScreen(flg);
+			}
 		}
 	}else if(eve.keyCode === 27){
 		run = false;
@@ -310,8 +257,7 @@ function HMD(){
 			navigator.getVRDevices().then(callback, callbackFunction);
 		}else{
 			console.log('device not found');
-			alert('device not found');
-			return;
+			callbackFunction();
 		}
 		function callback(device){
 			for(var i = 0; i < device.length; i++){
@@ -356,7 +302,7 @@ function HMD(){
 	this.resize = function(){
 		if(this.vrMode){
 			this.aspect = this.viewport.width / this.viewport.height;
-		} else {
+		}else{
 			this.aspect = window.innerWidth / window.innerHeight;
 		}
 	};
