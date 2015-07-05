@@ -24,6 +24,8 @@ window.onload = function(){
 
 // ============================================================================
 function initialize(){
+	var i, j;
+	
 	// initialize
 	gl3.initGL('canvas');
 	if(!gl3.ready){console.log('initialize error'); return;}
@@ -78,6 +80,18 @@ function initialize(){
 	];
 	var sphereIBO = gl3.create_ibo(sphereData.index);
 
+	// hall mesh
+	hallData.color = [];
+	for(i = 0, j = hallData.position.length; i < j; i += 3){
+		hallData.color.push(1.0, 1.0, 1.0, 1.0);
+	}
+	var hallVBO = [
+		gl3.create_vbo(hallData.position),
+		gl3.create_vbo(hallData.normal),
+		gl3.create_vbo(hallData.color)
+	];
+	var hallIBO = gl3.create_ibo(hallData.index);
+
 	// matrix
 	mMatrix = gl3.mat4.identity(gl3.mat4.create());
 	vMatrix = gl3.mat4.identity(gl3.mat4.create());
@@ -95,7 +109,7 @@ function initialize(){
 
 	// rendering
 	var count = 0;
-	var lightPosition = [0.0, 0.0, 0.0];
+	var lightPosition = [30.0, 30.0, 30.0];
 	
 	// sensor reset
 	if(vr.ready){
@@ -106,7 +120,6 @@ function initialize(){
 	// rendering
 	render();
 	function render(){
-		var _i, i, j;
 		var gl = gl3.gl;
 		
 		// initial
@@ -116,7 +129,7 @@ function initialize(){
 		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
 		
 		// camera
-		var cameraPosition = [0.0, 0.0, 0.0];
+		var cameraPosition = [0.0, 0.0, 10.0];
 		var centerPoint = [0.0, 0.0, -10.0];
 		var cameraUpDirection = [0.0, 1.0, 0.0];
 		
@@ -170,7 +183,7 @@ function initialize(){
 			renderMode([etl.x, etl.y, etl.z], [evl.left, evl.right, evl.width, evl.height]);
 			renderMode([etr.x, etr.y, etr.z], [evr.left, evr.right, evr.width, evr.height]);
 		}else{
-			renderMode([0.0, 0.0, 0.0], [0, 0, gl3.canvas.width, gl3.canvas.height]);
+			renderMode(cameraPosition, [0, 0, gl3.canvas.width, gl3.canvas.height]);
 		}
 		
 		// animation
@@ -189,9 +202,19 @@ function initialize(){
 			);
 			gl3.scene_view(camera, view[0], view[1], view[2], view[3]);
 			gl3.mat4.vpFromCamera(camera, vMatrix, pMatrix, vpMatrix);
-	
+			
 			// torus rendering
 			prg.set_program();
+			prg.set_attribute(hallVBO, hallIBO);
+			var ambientColor = [0.1, 0.1, 0.1, 0.0];
+			gl3.mat4.identity(mMatrix);
+			gl3.mat4.translate(mMatrix, [0.0, -1.0, 0.0], mMatrix);
+			gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
+			gl3.mat4.inverse(mMatrix, invMatrix);
+			prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
+			gl3.draw_elements(gl.TRIANGLES, hallData.index.length);
+			
+			// torus rendering
 			prg.set_attribute(torusVBO, torusIBO);
 			var radian = gl3.TRI.rad[count % 360];
 			var axis = [0.0, 1.0, 1.0];
@@ -206,9 +229,8 @@ function initialize(){
 //				gl3.mat4.multiply(mMatrix, qMatrix, mMatrix);
 				gl3.mat4.multiply(vpMatrix, mMatrix, mvpMatrix);
 				gl3.mat4.inverse(mMatrix, invMatrix);
-				var ambientColor = [0.1, 0.1, 0.1, 0.0];
 				prg.push_shader([mMatrix, mvpMatrix, invMatrix, lightPosition, cameraPosition, centerPoint, ambientColor]);
-				gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
+//				gl3.draw_elements(gl.TRIANGLES, torusData.index.length);
 			}
 		}
 	}
