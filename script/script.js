@@ -130,7 +130,7 @@ function initialize(){
 		gl3.scene_clear([0.3, 0.3, 0.3, 1.0], 1.0);
 
 		// camera
-		var cameraPosition = [0.0, 3.0, 10.0];
+		var cameraPosition = [0.0, 0.0, 10.0];
 		var centerPoint = [0.0, 0.0, -10.0];
 		var cameraUpDirection = [0.0, 1.0, 0.0];
 
@@ -181,8 +181,8 @@ function initialize(){
 			var etr = vr.eyeTranslation.right;
 			var evl = vr.eyeViewport.left;
 			var evr = vr.eyeViewport.right;
-			renderMode([etl.x, etl.y, etl.z], [evl.left, evl.right, evl.width, evl.height]);
-			renderMode([etr.x, etr.y, etr.z], [evr.left, evr.right, evr.width, evr.height]);
+			renderMode([etl.x, etl.y, etl.z], [evl.left, evl.top, evl.width, evl.height]);
+			renderMode([etr.x, etr.y, etr.z], [evr.left, evr.top, evr.width, evr.height]);
 		}else{
 			renderMode(cameraPosition, [0, 0, gl3.canvas.width, gl3.canvas.height]);
 		}
@@ -194,9 +194,9 @@ function initialize(){
 		function renderMode(trans, view){
 			var i, j;
 			j = 1.0;
-			cameraPosition[0] = trans[0] * j;
-			cameraPosition[1] = trans[1] * j;
-			cameraPosition[2] = trans[2] * j;
+			cameraPosition[0] += trans[0] * j;
+			cameraPosition[1] += trans[1] * j;
+			cameraPosition[2] += trans[2] * j;
 			var camera = gl3.camera.create(
 				cameraPosition, centerPoint, cameraUpDirection,
 				90, vr.aspect, 0.1, 100.0
