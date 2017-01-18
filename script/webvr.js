@@ -1,6 +1,48 @@
-/* webvr api wrapper
- * TODO: 2.4 made
- */
+/* webvr api wrapper ----------------------------------------------------------
+ * TODO:
+ *   script.js
+ * ---------------------------------------------------------------------------- */
+
+/* MEMO -----------------------------------------------------------------------
+ * VRDisplayCapabirities
+ *  {bool} hasPosition
+ *  {bool} hasOrientation
+ *  {bool} hasExternalDisplay
+ *  {bool} canPresent
+ *  {long} maxLayers
+ *
+ * VRFieldOfView
+ *  {double upDegrees
+ *  {double rightDegrees
+ *  {double downDegrees
+ *  {double leftDegrees
+ *
+ * VRPose
+ *  {DOMHighResTimeStamp} timestamp
+ *  {Float32Array}        position
+ *  {Float32Array}        linearVelocity
+ *  {Float32Array}        linearAcceleration
+ *  {Float32Array}        orientation
+ *  {Float32Array}        angularVelocity
+ *  {Float32Array}        angularAcceleration
+ *
+ * VREyeParameters
+ *  {Float32Array}  offset
+ *  {VRFieldOfView} fieldOfView
+ *  {unsigned long} renderWidth
+ *  {unsigned long} renderHeight
+ *
+ * VRStageParameters
+ *  {Float32Array} sittingToStandingTransform
+ *  {float}        sizeX
+ *  {float}        sizeZ
+ *
+ * Window Events
+ *  onvrdisplayconnected
+ *  onvrdisplaydisconnected
+ *  onvrdisplaypresentchange
+ *
+ * ---------------------------------------------------------------------------- */
 
 /* WEV class ------------------------------------------------------------------ */
 class WEV {
@@ -23,15 +65,6 @@ class WEV {
             this.callback = callbackFunction;
             this.init();
         }
-
-        /* MEMO
-         * VRDisplayCapabirities
-         *  {bool} hasPosition
-         *  {bool} hasOrientation
-         *  {bool} hasExternalDisplay
-         *  {bool} canPresent
-         *  {long} maxLayers
-         */
     }
     /* initialize WEV
      * @param {function} callbackFunction - callback funciton
@@ -194,73 +227,5 @@ class WEV {
             right: sourceLayer.rightBounds
         };
     }
-}
-
-
-// hmd ========================================================================
-function HMD(){
-    var tmp = this;
-    this.update = function(){
-        if(!this.sensor){return false;}
-        this.state = this.sensor.getState();
-        // this.state.timeStamp.toFixed(2);
-        // this.state.orientation;
-        // this.state.position;
-        // this.state.angularVelocity;
-        // this.state.linearVelocity;
-        // this.state.angularAcceleration;
-        // this.state.linearAcceleration;
-        return true;
-    };
-    this.resize = function(){
-        if(this.vrMode){
-            this.aspect = this.viewport.width / this.viewport.height;
-        }else{
-            this.aspect = window.innerWidth / window.innerHeight;
-        }
-    };
-    this.resizeFov = function(amount){
-        var fovLeft, fovRight, a;
-        if(!this.hmd){return;}
-        if(amount == null){a = 0.0;}else{a = amount;}
-        if(a != 0 && 'setFieldOfView' in this.hmd){
-            this.fovScale += a;
-            if(this.fovScale < 0.1){this.fovScale = 0.1;}
-            fovLeft = this.hmd.getRecommendedEyeFieldOfView("left");
-            fovRight = this.hmd.getRecommendedEyeFieldOfView("right");
-            fovLeft.upDegrees *= this.fovScale;
-            fovLeft.downDegrees *= this.fovScale;
-            fovLeft.leftDegrees *= this.fovScale;
-            fovLeft.rightDegrees *= this.fovScale;
-            fovRight.upDegrees *= this.fovScale;
-            fovRight.downDegrees *= this.fovScale;
-            fovRight.leftDegrees *= this.fovScale;
-            fovRight.rightDegrees *= this.fovScale;
-            this.hmd.setFieldOfView(fovLeft, fovRight);
-        }
-        if('getRecommendedEyeRenderRect' in this.hmd){
-            this.eyeViewport.left  = this.hmd.getRecommendedEyeRenderRect("left");
-            this.eyeViewport.right = this.hmd.getRecommendedEyeRenderRect("right");
-            this.viewport.width  = this.eyeViewport.left.width + this.eyeViewport.right.width;
-            this.viewport.height = Math.max(this.eyeViewport.left.height, this.eyeViewport.right.height);
-        }
-        this.resize();
-        if('getCurrentEyeFieldOfView' in this.hmd){
-            this.fov.left  = this.hmd.getCurrentEyeFieldOfView("left");
-            this.fov.right = this.hmd.getCurrentEyeFieldOfView("right");
-        }else{
-            this.fov.left  = this.hmd.getRecommendedEyeFieldOfView("left");
-            this.fov.right = this.hmd.getRecommendedEyeFieldOfView("right");
-        }
-    };
-    this.reset = function(){
-        if(this.sensor != null){
-            if('resetSensor' in this.sensor){
-                this.sensor.resetSensor();
-            }else if('zeroSensor' in this.sensor){
-                this.sensor.zeroSensor();
-            }
-        }
-    };
 }
 
