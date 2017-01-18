@@ -21,7 +21,7 @@ window.onload = function(){
 // ============================================================================
 function initialize(){
     var i, j;
-    
+
     // initialize
     gl3.initGL('canvas');
     if(!gl3.ready){console.log('initialize error'); return;}
@@ -35,7 +35,7 @@ function initialize(){
     window.addEventListener('keydown', keyDown, false);
     document.addEventListener("webkitfullscreenchange", onFullscreenChange, false);
     document.addEventListener("mozfullscreenchange", onFullscreenChange, false);
-    
+
     // dom
     info = {
         infoX: document.getElementById('infoX'),
