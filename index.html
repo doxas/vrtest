@@ -17,10 +17,10 @@ varying vec3 vNormal;
 varying vec4 vColor;
 
 void main(){
-	vPosition = (mMatrix * vec4(position, 1.0)).xyz;
-	vNormal = normal;
-	vColor = color;
-	gl_Position = mvpMatrix * vec4(position, 1.0);
+    vPosition = (mMatrix * vec4(position, 1.0)).xyz;
+    vNormal = normal;
+    vColor = color;
+    gl_Position = mvpMatrix * vec4(position, 1.0);
 }
 </script>
 <script id="fs" type="x-shader/x-fragment">
@@ -40,32 +40,32 @@ const float attStart = 2.0;
 const float attEnd = 30.0;
 
 void main(){
-	vec3 light    = lightPosition - vPosition;
-	vec3 invLight = normalize(invMatrix * vec4(light, 1.0)).xyz;
-	vec3 invEye   = normalize(invMatrix * vec4(eyePosition - centerPoint, 1.0)).xyz;
-	vec3 halfVec  = normalize(invLight + invEye);
-	float diff = clamp(dot(invLight, vNormal), 0.1, 1.0);
-	gl_FragColor = vec4(vec3(diff), 1.0) * vColor + ambientColor;
-//	float atten = 1.0 - smoothstep(attStart, attEnd, length(light));
-//	float diff = clamp(dot(invLight, vNormal), 0.1, 1.0) * max(atten, 0.05);
-//	float spec = clamp(dot(halfVec, vNormal), 0.0, 1.0);
-//	spec = pow(spec, 20.0) * atten;
-//	gl_FragColor = vec4(vec3(diff), 1.0) * vColor + ambientColor + vec4(vec3(spec), 0.0);
+    vec3 light    = lightPosition - vPosition;
+    vec3 invLight = normalize(invMatrix * vec4(light, 1.0)).xyz;
+    vec3 invEye   = normalize(invMatrix * vec4(eyePosition - centerPoint, 1.0)).xyz;
+    vec3 halfVec  = normalize(invLight + invEye);
+    float diff = clamp(dot(invLight, vNormal), 0.1, 1.0);
+    gl_FragColor = vec4(vec3(diff), 1.0) * vColor + ambientColor;
+//    float atten = 1.0 - smoothstep(attStart, attEnd, length(light));
+//    float diff = clamp(dot(invLight, vNormal), 0.1, 1.0) * max(atten, 0.05);
+//    float spec = clamp(dot(halfVec, vNormal), 0.0, 1.0);
+//    spec = pow(spec, 20.0) * atten;
+//    gl_FragColor = vec4(vec3(diff), 1.0) * vColor + ambientColor + vec4(vec3(spec), 0.0);
 }
 </script>
 <link rel="stylesheet" href="css/style.css">
 <title>vrtest</title>
 </head>
 <body>
-	<canvas id="canvas"></canvas>
-	<div id="info">
-		<p id="infoX"></p>
-		<p id="infoY"></p>
-		<p id="infoZ"></p>
-		<p id="infoW"></p>
-		<p id="infoPX"></p>
-		<p id="infoPY"></p>
-		<p id="infoPZ"></p>
-		<p id="infoPW"></p>
-	</div>
+    <canvas id="canvas"></canvas>
+    <div id="info">
+        <p id="infoX"></p>
+        <p id="infoY"></p>
+        <p id="infoZ"></p>
+        <p id="infoW"></p>
+        <p id="infoPX"></p>
+        <p id="infoPY"></p>
+        <p id="infoPZ"></p>
+        <p id="infoPW"></p>
+    </div>
 </body></html>

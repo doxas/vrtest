@@ -11,20 +11,27 @@
  *  {bool} canPresent
  *  {long} maxLayers
  *
- * VRFieldOfView
- *  {double upDegrees
- *  {double rightDegrees
- *  {double downDegrees
- *  {double leftDegrees
+ * VRFrameData
+ *  {DOMHighResTimeStamp} timestamp
+ *  {Float32Array}        leftProjectionMatrix
+ *  {Float32Array}        leftViewMatrix
+ *  {Float32Array}        rightProjectionMatrix
+ *  {Float32Array}        rightViewMatrix
+ *  {VRPose}              pose
  *
  * VRPose
- *  {DOMHighResTimeStamp} timestamp
- *  {Float32Array}        position
- *  {Float32Array}        linearVelocity
- *  {Float32Array}        linearAcceleration
- *  {Float32Array}        orientation
- *  {Float32Array}        angularVelocity
- *  {Float32Array}        angularAcceleration
+ *  {Float32Array} position
+ *  {Float32Array} linearVelocity
+ *  {Float32Array} linearAcceleration
+ *  {Float32Array} orientation
+ *  {Float32Array} angularVelocity
+ *  {Float32Array} angularAcceleration
+ *
+ * VRFieldOfView
+ *  {double} upDegrees
+ *  {double} rightDegrees
+ *  {double} downDegrees
+ *  {double} leftDegrees
  *
  * VREyeParameters
  *  {Float32Array}  offset
@@ -38,9 +45,49 @@
  *  {float}        sizeZ
  *
  * Window Events
- *  onvrdisplayconnected
- *  onvrdisplaydisconnected
+ *  onvrdisplayconnect
+ *  onvrdisplaydisconnect
+ *  onvrdisplayactivate
+ *  onvrdisplaydeactivate
+ *  onvrdisplayblur
+ *  onvrdisplayfocus
  *  onvrdisplaypresentchange
+ *
+ * ---------------------------------------------------------------------------- */
+
+/* EXAMPLE --------------------------------------------------------------------
+ *
+ * var frameData = new VRFrameData();
+ *
+ * // Render a single frame of VR data.
+ * function onVRFrame() {
+ *     // Schedule the next frame’s callback
+ *     vrDisplay.requestAnimationFrame(onVRFrame);
+ *
+ *     // Poll the VRDisplay for the current frame’s matrices and pose
+ *     vrDisplay.getFrameData(frameData);
+ *
+ *     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+ *     // Render to the left eye’s view to the left half of the canvas
+ *     gl.viewport(0, 0, canvas.width * 0.5, canvas.height);
+ *     gl.uniformMatrix4fv(projectionMatrixLocation, false, frameData.leftProjectionMatrix);
+ *     gl.uniformMatrix4fv(viewMatrixLocation, false, frameData.leftViewMatrix);
+ *     drawGeometry();
+ *
+ *     // Render to the right eye’s view to the right half of the canvas
+ *     gl.viewport(canvas.width * 0.5, 0, canvas.width * 0.5, canvas.height);
+ *     gl.uniformMatrix4fv(projectionMatrixLocation, false, frameData.rightProjectionMatrix);
+ *     gl.uniformMatrix4fv(viewMatrixLocation, false, frameData.rightViewMatrix);
+ *     drawGeometry();
+ *
+ *     // Indicate that we are ready to present the rendered frame to the VRDisplay
+ *     vrDisplay.submitFrame();
+ * }
+ *
+ * // Begin presentation (must be called within a user gesture)
+ * vrDisplay.requestPresent([{ source: canvas }]).then(function() {
+ *     vrDisplay.requestAnimationFrame(onVRFrame);
+ * });
  *
  * ---------------------------------------------------------------------------- */
 
@@ -187,6 +234,10 @@ class WEV {
         if(!this.display){return null;}
         return this.display.VREyeParameters;
     }
+    getFrameData(){
+        if(!this.display){return null;}
+        return this.display.getFrameData();
+    }
     getPose(){
         if(!this.display){return null;}
         return this.display.getPose();
@@ -203,6 +254,8 @@ class WEV {
         if(!this.display){return null;}
         return this.display.depthFar;
     }
+
+    /* util ------------------------------------------------------------------- */
     /* return default bounds setting
      * @return {object} left bounds and right bounds
      */
@@ -227,5 +280,86 @@ class WEV {
             right: sourceLayer.rightBounds
         };
     }
+    /* from VRPose to view matrix
+     * @param {VRPose} pose - VRPose object
+     * @return {Float32Array} - view matrix (4x4)
+     */
+    generateViewMatrix(pose){
+        let out = new Float32Array(16);
+        let q = [0.0, 0.0, 0.0, 1.0];
+        let v = [0.0, 0.0, 0.0];
+        if(!pose){return null;}
+        if(pose.orientation){q = pose.orientation;}
+        if(pose.position){v = pose.position;}
+        const x2 = q[0] + q[0], y2 = q[1] + q[1], z2 = q[2] + q[2];
+        const xx = q[0] * x2;
+        const xy = q[0] * y2;
+        const xz = q[0] * z2;
+        const yy = q[1] * y2;
+        const yz = q[1] * z2;
+        const zz = q[2] * z2;
+        const wx = q[3] * x2;
+        const wy = q[3] * y2;
+        const wz = q[3] * z2;
+        out[0]  = 1.0 - (yy + zz);
+        out[1]  = xy + wz;
+        out[2]  = xz - wy;
+        out[3]  = 0.0;
+        out[4]  = xy - wz;
+        out[5]  = 1.0 - (xx + zz);
+        out[6]  = yz + wx;
+        out[7]  = 0.0;
+        out[8]  = xz + wy;
+        out[9]  = yz - wx;
+        out[10] = 1.0 - (xx + yy);
+        out[11] = 0.0;
+        out[12] = v[0];
+        out[13] = v[1];
+        out[14] = v[2];
+        out[15] = 1.0;
+        return out;
+    }
+    /* from VRFieldOfView to projection matrix
+     * @param {VRFieldOfView}
+     *
+     */
+function fieldOfViewToProjectionMatrix (fov, zNear, zFar) {
+  var upTan = Math.tan(fov.upDegrees * Math.PI / 180.0);
+  var downTan = Math.tan(fov.downDegrees * Math.PI / 180.0);
+  var leftTan = Math.tan(fov.leftDegrees * Math.PI / 180.0);
+  var rightTan = Math.tan(fov.rightDegrees * Math.PI / 180.0);
+  var xScale = 2.0 / (leftTan + rightTan);
+  var yScale = 2.0 / (upTan + downTan);
+
+  var out = new Float32Array(16);
+  out[0] = xScale;
+  out[1] = 0.0;
+  out[2] = 0.0;
+  out[3] = 0.0;
+  out[4] = 0.0;
+  out[5] = yScale;
+  out[6] = 0.0;
+  out[7] = 0.0;
+  out[8] = -((leftTan - rightTan) * xScale * 0.5);
+  out[9] = ((upTan - downTan) * yScale * 0.5);
+  out[10] = -(zNear + zFar) / (zFar - zNear);
+  out[11] = -1.0;
+  out[12] = 0.0;
+  out[13] = 0.0;
+  out[14] = -(2.0 * zFar * zNear) / (zFar - zNear);
+  out[15] = 0.0;
+
+  return out;
 }
+
+// get optimized screen size
+var leftEye = vrDisplay.getEyeParameters("left");
+var rightEye = vrDisplay.getEyeParameters("right");
+
+canvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+}
+
+
+
 
