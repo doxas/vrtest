@@ -232,7 +232,7 @@ class WEV {
     }
     getEyeParameters(){
         if(!this.display){return null;}
-        return this.display.VREyeParameters;
+        return this.display.getEyeParameters();
     }
     getFrameData(){
         if(!this.display){return null;}
@@ -280,6 +280,18 @@ class WEV {
             right: sourceLayer.rightBounds
         };
     }
+    /* get viewport size
+     * @return {object} viewport width and height
+     */
+    getViewport(){
+        if(!this.display){return null;}
+        const leftEye  = this.display.getEyeParameters('left');
+        const rightEye = this.display.getEyeParameters('right');
+        return {
+            width: Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2,
+            height: Math.max(leftEye.renderHeight, rightEye.renderHeight)
+        };
+    }
     /* from VRPose to view matrix
      * @param {VRPose} pose - VRPose object
      * @return {Float32Array} - view matrix (4x4)
@@ -321,45 +333,34 @@ class WEV {
     }
     /* from VRFieldOfView to projection matrix
      * @param {VRFieldOfView}
-     *
+     * @return {Float32Array} - projection matrix (4x4)
      */
-function fieldOfViewToProjectionMatrix (fov, zNear, zFar) {
-  var upTan = Math.tan(fov.upDegrees * Math.PI / 180.0);
-  var downTan = Math.tan(fov.downDegrees * Math.PI / 180.0);
-  var leftTan = Math.tan(fov.leftDegrees * Math.PI / 180.0);
-  var rightTan = Math.tan(fov.rightDegrees * Math.PI / 180.0);
-  var xScale = 2.0 / (leftTan + rightTan);
-  var yScale = 2.0 / (upTan + downTan);
-
-  var out = new Float32Array(16);
-  out[0] = xScale;
-  out[1] = 0.0;
-  out[2] = 0.0;
-  out[3] = 0.0;
-  out[4] = 0.0;
-  out[5] = yScale;
-  out[6] = 0.0;
-  out[7] = 0.0;
-  out[8] = -((leftTan - rightTan) * xScale * 0.5);
-  out[9] = ((upTan - downTan) * yScale * 0.5);
-  out[10] = -(zNear + zFar) / (zFar - zNear);
-  out[11] = -1.0;
-  out[12] = 0.0;
-  out[13] = 0.0;
-  out[14] = -(2.0 * zFar * zNear) / (zFar - zNear);
-  out[15] = 0.0;
-
-  return out;
+    generateProjectionMatrix(fov, near, far){
+        const upTan    = Math.tan(fov.upDegrees * Math.PI / 180.0);
+        const downTan  = Math.tan(fov.downDegrees * Math.PI / 180.0);
+        const leftTan  = Math.tan(fov.leftDegrees * Math.PI / 180.0);
+        const rightTan = Math.tan(fov.rightDegrees * Math.PI / 180.0);
+        const xScale   = 2.0 / (leftTan + rightTan);
+        const yScale   = 2.0 / (upTan + downTan);
+        let out = new Float32Array(16);
+        out[0] = xScale;
+        out[1] = 0.0;
+        out[2] = 0.0;
+        out[3] = 0.0;
+        out[4] = 0.0;
+        out[5] = yScale;
+        out[6] = 0.0;
+        out[7] = 0.0;
+        out[8] = -((leftTan - rightTan) * xScale * 0.5);
+        out[9] = ((upTan - downTan) * yScale * 0.5);
+        out[10] = -(near + far) / (far - near);
+        out[11] = -1.0;
+        out[12] = 0.0;
+        out[13] = 0.0;
+        out[14] = -(2.0 * far * near) / (far - near);
+        out[15] = 0.0;
+        return out;
+    }
 }
-
-// get optimized screen size
-var leftEye = vrDisplay.getEyeParameters("left");
-var rightEye = vrDisplay.getEyeParameters("right");
-
-canvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
-canvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
-}
-
-
 
 
