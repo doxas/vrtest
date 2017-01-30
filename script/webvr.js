@@ -1,9 +1,17 @@
 /* webvr api wrapper ----------------------------------------------------------
  * TODO:
- *   script.js
+ *   script.js の実装の中身を作る
+ *   初期化して数値が出るところまでひとまず
+ *
+ *     - vive controllers を Gamepad API で取るやつ
+ *     - 
+ *     - 
+ *     - 
  * ---------------------------------------------------------------------------- */
 
 /* MEMO -----------------------------------------------------------------------
+ * Editor's Draft, 2 December 2016
+ *
  * VRDisplayCapabirities
  *  {bool} hasPosition
  *  {bool} hasOrientation
